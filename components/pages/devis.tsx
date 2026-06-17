@@ -47,7 +47,7 @@ export function DevisPage() {
         taxPercentage: 19,
         taxes: '0',
         ttc: '0',
-        signatureName: 'Fayçal Jelloul',
+        signatureName: 'Direction Fayçal Jelloul',
         companyName: '',
         status: 'draft',
       });

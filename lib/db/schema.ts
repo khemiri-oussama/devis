@@ -111,7 +111,7 @@ export const devis = pgTable('devis', {
   // real purpose (each row would silently get the next sequence value
   // instead of the 19 or 0 you actually sent). Changed to `integer`.
   taxPercentage: integer('taxpercentage').notNull().default(19),
-  signatureName: text('signaturename').notNull().default('Fayçal Jelloul'),
+  signatureName: text('signaturename').notNull().default('Direction Fayçal Jelloul'),
   status: text('status').notNull().default('draft'),
   workItems: jsonb('workitems').notNull().default('[]'),
 
@@ -136,7 +136,7 @@ export const templates = pgTable('templates', {
   userId: text('userid').notNull(),
   name: text('name').notNull(),
   introduction: text('introduction'),
-  signature: text('signature').notNull().default('Fayçal Jelloul'),
+  signature: text('signature').notNull().default('Direction Fayçal Jelloul'),
   content: jsonb('content').notNull().default('{}'),
   createdAt: timestamp('createdat').notNull().defaultNow(),
   updatedAt: timestamp('updatedat').notNull().defaultNow(),
@@ -149,7 +149,7 @@ export const settings = pgTable('settings', {
   companyAddress: text('companyaddress').notNull(),
   phone: text('phone').notNull(),
   email: text('email').notNull(),
-  defaultSignature: text('defaultsignature').notNull().default('Fayçal Jelloul'),
+  defaultSignature: text('defaultsignature').notNull().default('Direction Fayçal Jelloul'),
   currency: text('currency').notNull().default('DT'),
   taxLabel: text('taxlabel').notNull().default('TVA'),
   // Same fix as devis.taxPercentage above — was `serial(...)`.

@@ -283,7 +283,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'Fayçal Jelloul'"
+          "default": "'Direction Fayçal Jelloul'"
         },
         "status": {
           "name": "status",
@@ -487,7 +487,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'Fayçal Jelloul'"
+          "default": "'Direction Fayçal Jelloul'"
         },
         "currency": {
           "name": "currency",
@@ -593,7 +593,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'Fayçal Jelloul'"
+          "default": "'Direction Fayçal Jelloul'"
         },
         "content": {
           "name": "content",

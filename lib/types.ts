@@ -77,7 +77,7 @@ export const DEFAULT_SETTINGS: Settings = {
   companyAddress: '123 Rue de la Paix, Tunis',
   phone: '+216 71 234 567',
   email: 'contact@deratisation.tn',
-  defaultSignature: 'Fayçal Jelloul',
+  defaultSignature: 'Direction Fayçal Jelloul',
   currency: 'DT',
   taxLabel: 'TVA',
   taxPercentage: 19,

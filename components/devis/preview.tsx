@@ -682,7 +682,7 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
               }}
             >
               <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e40af', marginBottom: '5px' }}>
-                Détail des passages ({passageCount})
+                Prix des passages ({passageCount})
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
