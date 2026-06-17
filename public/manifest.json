@@ -1,0 +1,33 @@
+{
+  "name": "Gestionnaire de Devis",
+  "short_name": "Devis Pro",
+  "description": "Application offline-first pour créer et gérer les devis professionnels",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "form_factor": "wide"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}
