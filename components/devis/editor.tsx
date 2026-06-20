@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { PRESET_BLOCKS } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DevisPreview } from './preview';
+import { DevisPreview, MONTHS, buildDefaultMonthlyPassages, MonthlyPassage, ContractType } from './preview';
 import { FiX, FiPlus, FiSave } from 'react-icons/fi';
 
 interface DevisEditorProps {
@@ -21,68 +21,117 @@ export function DevisEditor({ devisId, onClose }: DevisEditorProps) {
   const settings = useAppStore((state) => state.settings);
   const getClientById = useAppStore((state) => state.getClientById);
 
-  const [formData, setFormData] = useState(devis || {
-    clientId: '',
-    date: new Date().toISOString().split('T')[0],
-    emailDate: new Date().toISOString().split('T')[0],
-    subject: '',
-    introduction: '',
-    workItems: [],
-    premises: '',
-    amount: '',
-    taxLabel: settings.taxLabel,
-    taxes: '0',
-    ttc: settings.currency,
-    signatureName: settings.defaultSignature,
-    companyName: settings.companyName,
-    number: '',
-    status: 'draft' as const,
-    // NEW: tax mode — 'ttc' applies TVA, 'ht' is HT-only (no TVA line, total = HT)
-    taxMode: 'ttc' as 'ttc' | 'ht',
-    // NEW: passages (visits) pricing
-    passageCount: 1,
-    passageSamePrice: true,
-    passageUnitPrice: '',          // used when passageSamePrice is true
-    passagePrices: [] as string[], // used when passageSamePrice is false, one entry per passage
-  });
+  const DEFAULT_SUBJECT = "A l'attention de Monsieur Le Directeur Géneral";
+  const DEFAULT_INTRODUCTION =
+    'introduction techniques et interventions visant à éliminer ou à contrôler les populations de rats et de souris dans les habitations, les locaux professionnels et les espaces publics. Ces rongeurs peuvent causer d’importants dégâts matériels, contaminer les denrées alimentaires et transmettre certaines maladies. Une dératisation efficace permet de protéger la santé des occupants, de préserver les biens et d’assurer un environnement sain et sécurisé.';
+
+  // Build the initial form state by merging `devis` (if it already exists
+  // in the store — e.g. the app pre-creates a blank row before opening
+  // this editor) with our defaults on a FIELD-BY-FIELD basis, rather than
+  // `devis || {...defaults}`. With the old all-or-nothing version, any
+  // pre-created devis row (even one with empty/blank subject and
+  // introduction) was truthy, so the whole defaults object was skipped
+  // and the blank strings from the DB won. This way a blank/missing
+  // subject or introduction still falls back to the default text, while
+  // any real saved content on an existing devis is left untouched.
+  const initialFormData = {
+    clientId: devis?.clientId ?? '',
+    date: devis?.date ?? new Date().toISOString().split('T')[0],
+    emailDate: devis?.emailDate ?? new Date().toISOString().split('T')[0],
+    subject: devis?.subject?.trim() ? devis.subject : DEFAULT_SUBJECT,
+    introduction: devis?.introduction?.trim() ? devis.introduction : DEFAULT_INTRODUCTION,
+    workItems: devis?.workItems ?? [],
+    premises: devis?.premises ?? '',
+    amount: devis?.amount ?? '',
+    taxLabel: (devis as any)?.taxLabel ?? settings.taxLabel,
+    taxes: devis?.taxes ?? '0',
+    ttc: devis?.ttc ?? settings.currency,
+    signatureName: devis?.signatureName ?? settings.defaultSignature,
+    companyName: (devis as any)?.companyName ?? settings.companyName,
+    number: devis?.number ?? '',
+    status: devis?.status ?? ('draft' as const),
+    // Tax mode — defaults to 'ht' (no TVA line, total = HT). The toggle
+    // below still lets the user switch to 'ttc' (adds 19% TVA) if needed.
+    taxMode: ((devis as any)?.taxMode ?? 'ht') as 'ttc' | 'ht',
+    // Contract type — 'monthly' shows the 12-month passages table,
+    // 'oneoff' shows a single "number of passages" field instead.
+    contractType: ((devis as any)?.contractType ?? 'monthly') as ContractType,
+    // Monthly passages: fixed 12-row table (Jan→Dec), single shared price
+    // per passage across all months. Only used when contractType='monthly'.
+    monthlyPassages: ((devis as any)?.monthlyPassages ?? buildDefaultMonthlyPassages()) as MonthlyPassage[],
+    // Flat passage count for a one-off job. Only used when
+    // contractType='oneoff'. Defaults to 1 (a single visit).
+    oneoffPassageCount: (devis as any)?.oneoffPassageCount ?? 1,
+    passageUnitPrice: (devis as any)?.passageUnitPrice ?? '', // shared price applied to every passage, every month
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
+
+  // Handles the case where `devis` isn't in the store yet on first render
+  // (e.g. it's still being fetched) and only arrives a moment later. The
+  // useState initializer above only ever runs once, so if `devis` shows
+  // up AFTER mount, formData would otherwise keep showing the hardcoded
+  // defaults even after the real (blank) row loads — fine for a brand
+  // new devis, but wrong if the row turns out to already have saved
+  // content. This effect applies the same field-by-field merge once,
+  // the first time `devis` becomes available, without overwriting
+  // anything the user may have already started typing in fields that
+  // aren't blank/default.
+  const hasSyncedFromStore = useRef(false);
+  useEffect(() => {
+    if (!devis || hasSyncedFromStore.current) return;
+    hasSyncedFromStore.current = true;
+
+    setFormData((prev: any) => ({
+      ...prev,
+      clientId: devis.clientId || prev.clientId,
+      date: devis.date || prev.date,
+      emailDate: devis.emailDate || prev.emailDate,
+      subject: devis.subject?.trim() ? devis.subject : prev.subject,
+      introduction: devis.introduction?.trim() ? devis.introduction : prev.introduction,
+      workItems: devis.workItems?.length ? devis.workItems : prev.workItems,
+      premises: devis.premises || prev.premises,
+      amount: devis.amount || prev.amount,
+      taxes: devis.taxes || prev.taxes,
+      ttc: devis.ttc || prev.ttc,
+      signatureName: devis.signatureName || prev.signatureName,
+      number: devis.number || prev.number,
+      status: devis.status || prev.status,
+      taxMode: (devis as any).taxMode || prev.taxMode,
+      contractType: (devis as any).contractType || prev.contractType,
+      monthlyPassages: (devis as any).monthlyPassages ?? prev.monthlyPassages,
+      oneoffPassageCount: (devis as any).oneoffPassageCount ?? prev.oneoffPassageCount,
+      passageUnitPrice: (devis as any).passageUnitPrice || prev.passageUnitPrice,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devis]);
 
   const [saving, setSaving] = useState(false);
 
-  const taxMode = (formData as any).taxMode ?? 'ttc';
-  const passageCount = (formData as any).passageCount ?? 1;
-  const passageSamePrice = (formData as any).passageSamePrice ?? true;
-  const passageUnitPrice = (formData as any).passageUnitPrice ?? '';
-  const passagePrices: string[] = (formData as any).passagePrices ?? [];
+  const taxMode = (formData as any).taxMode ?? 'ht';
+  const contractType: ContractType = (formData as any).contractType ?? 'monthly';
+  const isOneOff = contractType === 'oneoff';
+  const monthlyPassages: MonthlyPassage[] =
+    (formData as any).monthlyPassages ?? buildDefaultMonthlyPassages();
+  const oneoffPassageCount: number = (formData as any).oneoffPassageCount ?? 1;
+  const passageUnitPrice: string = (formData as any).passageUnitPrice ?? '';
 
-  // Keep passagePrices array length in sync with passageCount whenever it changes,
-  // preserving any prices already entered.
-  useEffect(() => {
-    if (!passageSamePrice) {
-      setFormData((prev: any) => {
-        const current: string[] = prev.passagePrices ?? [];
-        const next = Array.from({ length: passageCount }, (_, i) => current[i] ?? '');
-        return { ...prev, passagePrices: next };
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [passageCount, passageSamePrice]);
-
-  // Central place that recomputes amount/taxes/ttc whenever any pricing input changes:
-  // tax mode, passage count, same/different price toggle, or any price value.
+  // Central place that recomputes amount/taxes/ttc whenever any pricing
+  // input changes: tax mode, contract type, a month's passage count, the
+  // one-off passage count, or the unit price.
   const recalcTotals = (overrides: Partial<typeof formData> = {}) => {
     const merged: any = { ...formData, ...overrides };
-    const mode = merged.taxMode ?? 'ttc';
-    const count = merged.passageCount ?? 1;
-    const same = merged.passageSamePrice ?? true;
+    const mode = merged.taxMode ?? 'ht';
+    const type: ContractType = merged.contractType ?? 'monthly';
+    const months: MonthlyPassage[] = merged.monthlyPassages ?? buildDefaultMonthlyPassages();
+    const oneoffCount = Number(merged.oneoffPassageCount) || 0;
     const unit = parseFloat(merged.passageUnitPrice) || 0;
-    const prices: string[] = merged.passagePrices ?? [];
 
-    let baseAmount = 0;
-    if (same) {
-      baseAmount = unit * count;
-    } else {
-      baseAmount = prices.reduce((sum, p) => sum + (parseFloat(p) || 0), 0);
-    }
+    const totalPassages =
+      type === 'oneoff'
+        ? oneoffCount
+        : months.reduce((sum, m) => sum + (Number(m.count) || 0), 0);
+    const baseAmount = unit * totalPassages;
 
     let taxes = 0;
     let ttc = baseAmount;
@@ -104,24 +153,28 @@ export function DevisEditor({ devisId, onClose }: DevisEditorProps) {
     setFormData(recalcTotals({ taxMode: mode }));
   };
 
-  const handlePassageCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const count = Math.max(1, parseInt(e.target.value) || 1);
-    setFormData(recalcTotals({ passageCount: count }));
+  const handleContractTypeChange = (type: ContractType) => {
+    setFormData(recalcTotals({ contractType: type }));
   };
 
-  const handleSamePriceToggle = (checked: boolean) => {
-    setFormData(recalcTotals({ passageSamePrice: checked }));
+  const handleMonthCountChange = (index: number, value: string) => {
+    const count = Math.max(0, parseInt(value) || 0);
+    const next = monthlyPassages.map((m, i) => (i === index ? { ...m, count } : m));
+    setFormData(recalcTotals({ monthlyPassages: next }));
+  };
+
+  const handleOneoffCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const count = Math.max(0, parseInt(e.target.value) || 0);
+    setFormData(recalcTotals({ oneoffPassageCount: count }));
   };
 
   const handleUnitPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(recalcTotals({ passageUnitPrice: e.target.value }));
   };
 
-  const handlePassagePriceChange = (index: number, value: string) => {
-    const next = [...passagePrices];
-    next[index] = value;
-    setFormData(recalcTotals({ passagePrices: next }));
-  };
+  const totalPassages = isOneOff
+    ? Number(oneoffPassageCount) || 0
+    : monthlyPassages.reduce((sum, m) => sum + (Number(m.count) || 0), 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -343,25 +396,14 @@ export function DevisEditor({ devisId, onClose }: DevisEditorProps) {
                 />
               </div>
 
-              {/* Tax Mode + Passages Section */}
+              {/* Tax Mode + Monthly Passages Section */}
               <div className="border-t border-border pt-6 space-y-4">
                 <h3 className="font-semibold text-foreground">Tarification</h3>
 
-                {/* TVA / HT toggle */}
+                {/* TVA / HT toggle — defaults to HT, switchable to TVA */}
                 <div>
                   <Label>Mode de taxation</Label>
                   <div className="mt-1 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleTaxModeChange('ttc')}
-                      className={`flex-1 p-2 rounded-md border text-sm font-medium transition-colors ${
-                        taxMode === 'ttc'
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background text-foreground border-input'
-                      }`}
-                    >
-                      Avec TVA (19%)
-                    </button>
                     <button
                       type="button"
                       onClick={() => handleTaxModeChange('ht')}
@@ -373,68 +415,107 @@ export function DevisEditor({ devisId, onClose }: DevisEditorProps) {
                     >
                       H.T (sans TVA)
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTaxModeChange('ttc')}
+                      className={`flex-1 p-2 rounded-md border text-sm font-medium transition-colors ${
+                        taxMode === 'ttc'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-foreground border-input'
+                      }`}
+                    >
+                      Avec TVA (19%)
+                    </button>
                   </div>
                 </div>
 
-                {/* Number of passages */}
+                {/* Monthly contract / one-off job toggle */}
                 <div>
-                  <Label htmlFor="passageCount">Nombre de passages</Label>
+                  <Label>Type de contrat</Label>
+                  <div className="mt-1 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleContractTypeChange('monthly')}
+                      className={`flex-1 p-2 rounded-md border text-sm font-medium transition-colors ${
+                        contractType === 'monthly'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-foreground border-input'
+                      }`}
+                    >
+                      Contrat mensuel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleContractTypeChange('oneoff')}
+                      className={`flex-1 p-2 rounded-md border text-sm font-medium transition-colors ${
+                        contractType === 'oneoff'
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background text-foreground border-input'
+                      }`}
+                    >
+                      Intervention unique
+                    </button>
+                  </div>
+                </div>
+
+                {/* Shared price per passage, applies across all months
+                    (or to the single one-off count) */}
+                <div>
+                  <Label htmlFor="passageUnitPrice">Prix par passage</Label>
                   <Input
-                    id="passageCount"
+                    id="passageUnitPrice"
                     type="number"
-                    min={1}
-                    step="1"
-                    value={passageCount}
-                    onChange={handlePassageCountChange}
+                    step="0.01"
+                    value={passageUnitPrice}
+                    onChange={handleUnitPriceChange}
                     className="mt-1"
                   />
                 </div>
 
-                {/* Same price checkbox */}
-                <div className="flex items-center gap-2">
-                  <input
-                    id="passageSamePrice"
-                    type="checkbox"
-                    checked={passageSamePrice}
-                    onChange={(e) => handleSamePriceToggle(e.target.checked)}
-                    className="w-4 h-4 rounded border-input"
-                  />
-                  <Label htmlFor="passageSamePrice" className="cursor-pointer">
-                    Tous les passages ont le même prix
-                  </Label>
-                </div>
-
-                {/* Same price: single unit price input */}
-                {passageSamePrice ? (
+                {isOneOff ? (
+                  /* One-off job: a single passage count, no month breakdown */
                   <div>
-                    <Label htmlFor="passageUnitPrice">Prix par passage</Label>
+                    <Label htmlFor="oneoffPassageCount">Nombre de passages</Label>
                     <Input
-                      id="passageUnitPrice"
+                      id="oneoffPassageCount"
                       type="number"
-                      step="0.01"
-                      value={passageUnitPrice}
-                      onChange={handleUnitPriceChange}
+                      min={0}
+                      step="1"
+                      value={oneoffPassageCount}
+                      onChange={handleOneoffCountChange}
                       className="mt-1"
                     />
                   </div>
                 ) : (
-                  /* Different price per passage: one input per passage */
-                  <div className="space-y-2">
-                    <Label>Prix de chaque passage</Label>
-                    {Array.from({ length: passageCount }).map((_, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <span className="text-sm text-foreground/60 w-20 flex-shrink-0">
-                          Passage {idx + 1}
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={passagePrices[idx] ?? ''}
-                          onChange={(e) => handlePassagePriceChange(idx, e.target.value)}
-                          placeholder="0.00"
-                        />
-                      </div>
-                    ))}
+                  /* Recurring contract: fixed 12-month passages table */
+                  <div>
+                    <Label>Nombre de passages par mois</Label>
+                    <div className="mt-1 border border-border rounded-md overflow-hidden">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {MONTHS.map((month, idx) => (
+                            <tr
+                              key={month}
+                              className={idx < MONTHS.length - 1 ? 'border-b border-border' : ''}
+                            >
+                              <td className="px-3 py-2 text-foreground/80 w-1/2">{month}</td>
+                              <td className="px-3 py-1.5 w-1/2">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step="1"
+                                  value={monthlyPassages[idx]?.count ?? 0}
+                                  onChange={(e) => handleMonthCountChange(idx, e.target.value)}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-foreground/50 mt-2">
+                      Total: {totalPassages} passage{totalPassages > 1 ? 's' : ''} sur l&apos;année
+                    </p>
                   </div>
                 )}
               </div>
@@ -482,7 +563,8 @@ export function DevisEditor({ devisId, onClose }: DevisEditorProps) {
                   )}
                 </div>
                 <p className="text-xs text-foreground/50">
-                  Le montant est calculé automatiquement à partir du nombre de passages et de leur(s) prix.
+                  Le montant est calculé automatiquement à partir du{' '}
+                  {isOneOff ? 'nombre de passages' : 'nombre total de passages (toute l\'année)'} et du prix par passage.
                 </p>
               </div>
 

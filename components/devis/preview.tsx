@@ -13,6 +13,37 @@ interface DevisPreviewProps {
   showActions?: boolean;
 }
 
+// Fixed 12-month list used to build the passages table. Order matters —
+// this is both the row order in the UI and the row order in the PDF/print
+// output.
+export const MONTHS = [
+  'Janvier',
+  'Février',
+  'Mars',
+  'Avril',
+  'Mai',
+  'Juin',
+  'Juillet',
+  'Août',
+  'Septembre',
+  'Octobre',
+  'Novembre',
+  'Décembre',
+] as const;
+
+export type MonthlyPassage = {
+  month: string;
+  count: number;
+};
+
+export type ContractType = 'monthly' | 'oneoff';
+
+// Builds a default 12-row array (one per month, count 0) — used as a
+// fallback for old devis records that predate this field.
+export function buildDefaultMonthlyPassages(): MonthlyPassage[] {
+  return MONTHS.map((month) => ({ month, count: 0 }));
+}
+
 /**
  * Builds the full plain-CSS HTML document used for BOTH print and PDF
  * export. This is the single source of truth: every color in here is a
@@ -76,35 +107,35 @@ function buildDevisHtmlDocument(params: {
               min-height: 297mm;
               height: 297mm;
               background: #ffffff;
-              font-size: 12.5px;
-              line-height: 1.4;
+              font-size: 14px;
+              line-height: 1.35;
               display: flex;
               flex-direction: column;
               overflow: hidden;
             }
 
             .header-section {
-              padding: 10mm 15mm;
+              padding: 8mm 15mm;
               border-bottom: 3px solid #1e40af;
               background-color: #f8fafc;
               flex-shrink: 0;
             }
 
             .company-block {
-              margin-bottom: 12px;
+              margin-bottom: 10px;
             }
 
             .company-name {
-              font-size: 24px;
+              font-size: 26px;
               font-weight: bold;
               color: #1e40af;
               margin-bottom: 4px;
             }
 
             .company-meta {
-              font-size: 11px;
+              font-size: 12.5px;
               color: #64748b;
-              line-height: 1.5;
+              line-height: 1.45;
             }
 
             .header-row {
@@ -114,14 +145,14 @@ function buildDevisHtmlDocument(params: {
             }
 
             .doc-title {
-              font-size: 19px;
+              font-size: 21px;
               font-weight: bold;
               color: #1e40af;
-              margin-bottom: 7px;
+              margin-bottom: 6px;
             }
 
             .doc-meta {
-              font-size: 11px;
+              font-size: 12.5px;
               color: #475569;
             }
 
@@ -131,22 +162,22 @@ function buildDevisHtmlDocument(params: {
 
             .client-block {
               text-align: right;
-              font-size: 11px;
+              font-size: 12.5px;
             }
 
             .client-label {
               font-weight: bold;
-              margin-bottom: 5px;
+              margin-bottom: 4px;
               color: #1e40af;
             }
 
             .client-detail {
-              margin-bottom: 3px;
+              margin-bottom: 2px;
               color: #64748b;
             }
 
             .content-section {
-              padding: 6mm 15mm 5mm;
+              padding: 5mm 15mm 4mm;
               flex: 1;
               overflow: hidden;
               display: flex;
@@ -154,36 +185,36 @@ function buildDevisHtmlDocument(params: {
             }
 
             .intro-block {
-              margin-bottom: 9px;
+              margin-bottom: 8px;
               background-color: #f1f5f9;
-              padding: 7px 10px;
+              padding: 6px 10px;
               border-left: 4px solid #1e40af;
             }
 
             .intro-text {
               white-space: pre-wrap;
-              font-size: 11px;
-              line-height: 1.5;
+              font-size: 12.5px;
+              line-height: 1.4;
             }
 
             .work-items-section {
-              margin-bottom: 9px;
+              margin-bottom: 8px;
               flex: 1;
               overflow: hidden;
             }
 
             .section-title {
-              font-size: 12.5px;
+              font-size: 14px;
               font-weight: bold;
-              margin-bottom: 7px;
+              margin-bottom: 6px;
               color: #1e40af;
               border-bottom: 2px solid #e2e8f0;
               padding-bottom: 4px;
             }
 
             .work-item {
-              margin-bottom: 7px;
-              padding-bottom: 7px;
+              margin-bottom: 6px;
+              padding-bottom: 6px;
             }
 
             .work-item-border {
@@ -192,49 +223,49 @@ function buildDevisHtmlDocument(params: {
 
             .work-item-title {
               font-weight: bold;
-              margin-bottom: 3px;
-              font-size: 11px;
+              margin-bottom: 2px;
+              font-size: 12.5px;
               color: #0f172a;
             }
 
             .work-item-desc {
               white-space: pre-wrap;
-              font-size: 10.5px;
-              line-height: 1.4;
+              font-size: 12px;
+              line-height: 1.35;
               color: #475569;
             }
 
             .premises-block {
-              margin-bottom: 9px;
+              margin-bottom: 8px;
               background-color: #f8fafc;
-              padding: 7px 10px;
+              padding: 6px 10px;
               border-radius: 4px;
             }
 
             .premises-label {
               font-weight: bold;
-              margin-bottom: 4px;
-              font-size: 11px;
+              margin-bottom: 3px;
+              font-size: 12.5px;
               color: #0f172a;
             }
 
             .premises-text {
-              font-size: 10.5px;
+              font-size: 12px;
               color: #475569;
             }
 
             .passages-wrap {
               page-break-inside: avoid;
               break-inside: avoid;
-              margin-top: 9px;
+              margin-top: 8px;
               flex-shrink: 0;
             }
 
             .passages-title {
-              font-size: 11px;
+              font-size: 12.5px;
               font-weight: bold;
               color: #1e40af;
-              margin-bottom: 5px;
+              margin-bottom: 4px;
             }
 
             .passages-table {
@@ -243,33 +274,52 @@ function buildDevisHtmlDocument(params: {
             }
 
             .passages-table td, .passages-table th {
-              padding: 5px 10px;
-              font-size: 10.5px;
+              padding: 4px 6px;
+              font-size: 11px;
             }
 
             .passages-table th {
-              text-align: left;
+              text-align: center;
               background-color: #e2e8f0;
               color: #1e40af;
               font-weight: bold;
               border-bottom: 1px solid #cbd5e1;
+              border-right: 1px solid #cbd5e1;
+            }
+
+            .passages-table th:last-child {
+              border-right: none;
             }
 
             .passages-table td {
               border-bottom: 1px solid #e2e8f0;
+              border-right: 1px solid #e2e8f0;
               color: #475569;
+              text-align: center;
             }
 
-            .passages-table td.num {
-              text-align: right;
+            .passages-table td:last-child {
+              border-right: none;
+            }
+
+            .passages-table .month-row td.month-cell {
               font-weight: 600;
               color: #0f172a;
+              background-color: #f8fafc;
+            }
+
+            .passages-summary {
+              margin-top: 5px;
+              text-align: right;
+              font-size: 12px;
+              color: #1e40af;
+              font-weight: bold;
             }
 
             .pricing-wrap {
               page-break-inside: avoid;
               break-inside: avoid;
-              margin-top: 9px;
+              margin-top: 8px;
               flex-shrink: 0;
             }
 
@@ -279,20 +329,20 @@ function buildDevisHtmlDocument(params: {
             }
 
             .pricing-table td {
-              padding: 7px 10px;
+              padding: 6px 10px;
             }
 
             .row-ht { background-color: #f1f5f9; }
             .row-ht td {
               border-bottom: 2px solid #1e40af;
               font-weight: bold;
-              font-size: 11px;
+              font-size: 12.5px;
             }
 
             .row-tva { background-color: #f8fafc; }
             .row-tva td {
               border-bottom: 1px solid #e2e8f0;
-              font-size: 11px;
+              font-size: 12.5px;
             }
             .row-tva td:last-child {
               font-weight: bold;
@@ -300,14 +350,14 @@ function buildDevisHtmlDocument(params: {
 
             .row-ttc { background-color: #dbeafe; }
             .row-ttc td {
-              padding: 9px 10px;
+              padding: 8px 10px;
               border-bottom: 2px solid #1e40af;
               font-weight: bold;
-              font-size: 12px;
+              font-size: 13.5px;
               color: #1e40af;
             }
             .row-ttc td:last-child {
-              font-size: 14px;
+              font-size: 16px;
             }
 
             .text-right { text-align: right; }
@@ -315,7 +365,7 @@ function buildDevisHtmlDocument(params: {
             .col-value  { width: 40%; }
 
             .footer-section {
-              padding: 7mm 15mm;
+              padding: 6mm 15mm;
               border-top: 3px solid #1e40af;
               background-color: #f8fafc;
               flex-shrink: 0;
@@ -324,29 +374,29 @@ function buildDevisHtmlDocument(params: {
             }
 
             .signature-block {
-              margin-bottom: 9px;
+              margin-bottom: 7px;
               text-align: center;
             }
 
             .signature-name {
-              font-size: 12px;
+              font-size: 13.5px;
               font-weight: bold;
               color: #1e40af;
               margin-bottom: 3px;
             }
 
             .signature-date {
-              font-size: 10.5px;
+              font-size: 12px;
               color: #64748b;
             }
 
             .footer-note {
-              font-size: 9.5px;
+              font-size: 11px;
               color: #64748b;
               text-align: center;
               font-style: italic;
               border-top: 1px solid #e2e8f0;
-              padding-top: 7px;
+              padding-top: 6px;
             }
 
             .footer-note div + div {
@@ -370,14 +420,24 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
 
   const client = getClientById(devis.clientId);
 
-  // tax mode + passages data (all optional / backward-compatible with old devis records)
-  const taxMode = (devis as any).taxMode ?? 'ttc';
-  const passageCount: number = (devis as any).passageCount ?? 1;
-  const passageSamePrice: boolean = (devis as any).passageSamePrice ?? true;
-  const passageUnitPrice: string = (devis as any).passageUnitPrice ?? '';
-  const passagePrices: string[] = (devis as any).passagePrices ?? [];
+  // Tax mode defaults to 'ht' (no TVA line) but the toggle in the editor
+  // still lets the user switch back to 'ttc'. All ?? fallbacks below exist
+  // only for devis records saved before this field existed.
+  const taxMode = (devis as any).taxMode ?? 'ht';
 
-  const showPassageBreakdown = passageCount > 1;
+  // Contract type: 'monthly' uses the 12-month table below, 'oneoff' uses
+  // a single flat passage count with no month breakdown.
+  const contractType: ContractType = (devis as any).contractType ?? 'monthly';
+  const isOneOff = contractType === 'oneoff';
+
+  // Monthly passages table: 12 fixed rows (Jan→Dec), one shared unit price.
+  // Falls back to a zeroed 12-row array for old devis records that don't
+  // have this field yet. Only relevant when contractType === 'monthly'.
+  const monthlyPassages: MonthlyPassage[] =
+    (devis as any).monthlyPassages ?? buildDefaultMonthlyPassages();
+  const passageUnitPrice: string = (devis as any).passageUnitPrice ?? '';
+
+  const unitPriceNum = parseFloat(passageUnitPrice) || 0;
 
   const handlePrint = () => {
     if (!previewRef.current) return;
@@ -500,15 +560,6 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
   const taxesNum = parseFloat(devis.taxes) || 0;
   const ttcNum   = parseFloat(devis.ttc)   || 0;
 
-  const passageRows = showPassageBreakdown
-    ? Array.from({ length: passageCount }, (_, idx) => {
-        const price = passageSamePrice
-          ? parseFloat(passageUnitPrice) || 0
-          : parseFloat(passagePrices[idx]) || 0;
-        return { label: `Passage ${idx + 1}`, price };
-      })
-    : [];
-
   return (
     <div>
       {showActions && (
@@ -533,8 +584,8 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
           minHeight: '297mm',
           background: 'white',
           color: '#0f172a',
-          fontSize: '12.5px',
-          lineHeight: '1.4',
+          fontSize: '14px',
+          lineHeight: '1.35',
           margin: '0 auto',
           fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
           display: 'flex',
@@ -545,17 +596,17 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
         <div
           className="header-section"
           style={{
-            padding: '10mm 15mm',
+            padding: '8mm 15mm',
             borderBottom: '3px solid #1e40af',
             backgroundColor: '#f8fafc',
             flexShrink: 0,
           }}
         >
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e40af', marginBottom: '4px' }}>
+          <div style={{ marginBottom: '10px' }}>
+            <div style={{ fontSize: '26px', fontWeight: 'bold', color: '#1e40af', marginBottom: '4px' }}>
               {settings.companyName}
             </div>
-            <div style={{ fontSize: '11px', color: '#64748b', lineHeight: '1.5' }}>
+            <div style={{ fontSize: '12.5px', color: '#64748b', lineHeight: '1.45' }}>
               <div>{settings.companyAddress}</div>
               <div>Tél: {settings.phone} | Email: {settings.email}</div>
             </div>
@@ -563,10 +614,10 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ fontSize: '19px', fontWeight: 'bold', color: '#1e40af', marginBottom: '7px' }}>
+              <div style={{ fontSize: '21px', fontWeight: 'bold', color: '#1e40af', marginBottom: '6px' }}>
                 DEVIS
               </div>
-              <div style={{ fontSize: '11px', color: '#475569' }}>
+              <div style={{ fontSize: '12.5px', color: '#475569' }}>
                 <div style={{ marginBottom: '3px' }}><strong>N°:</strong> {devis.number}</div>
                 <div style={{ marginBottom: '3px' }}>
                   <strong>Date:</strong> {new Date(devis.date).toLocaleDateString('fr-FR')}
@@ -576,13 +627,13 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
             </div>
 
             {client && (
-              <div style={{ textAlign: 'right', fontSize: '11px' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px', color: '#1e40af' }}>CLIENT</div>
+              <div style={{ textAlign: 'right', fontSize: '12.5px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#1e40af' }}>CLIENT</div>
                 <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{client.companyName}</div>
-                <div style={{ marginBottom: '3px' }}>{client.contactPerson}</div>
-                {client.title && <div style={{ marginBottom: '3px', color: '#64748b' }}>{client.title}</div>}
-                <div style={{ marginBottom: '3px', color: '#64748b' }}>{client.email}</div>
-                <div style={{ marginBottom: '3px', color: '#64748b' }}>{client.phone}</div>
+                <div style={{ marginBottom: '2px' }}>{client.contactPerson}</div>
+                {client.title && <div style={{ marginBottom: '2px', color: '#64748b' }}>{client.title}</div>}
+                <div style={{ marginBottom: '2px', color: '#64748b' }}>{client.email}</div>
+                <div style={{ marginBottom: '2px', color: '#64748b' }}>{client.phone}</div>
                 <div style={{ color: '#64748b' }}>{client.address}</div>
               </div>
             )}
@@ -593,7 +644,7 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
         <div
           className="content-section"
           style={{
-            padding: '6mm 15mm 5mm',
+            padding: '5mm 15mm 4mm',
             flex: 1,
             overflow: 'hidden',
             display: 'flex',
@@ -604,26 +655,26 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
           {devis.introduction && (
             <div
               style={{
-                marginBottom: '9px',
+                marginBottom: '8px',
                 backgroundColor: '#f1f5f9',
-                padding: '7px 10px',
+                padding: '6px 10px',
                 borderLeft: '4px solid #1e40af',
                 flexShrink: 0,
               }}
             >
-              <div style={{ whiteSpace: 'pre-wrap', fontSize: '11px', lineHeight: '1.5' }}>
+              <div style={{ whiteSpace: 'pre-wrap', fontSize: '12.5px', lineHeight: '1.4' }}>
                 {devis.introduction}
               </div>
             </div>
           )}
 
           {/* Work Items */}
-          <div style={{ marginBottom: '9px', flex: 1, overflow: 'hidden' }}>
+          <div style={{ marginBottom: '8px', flex: 1, overflow: 'hidden' }}>
             <div
               style={{
-                fontSize: '12.5px',
+                fontSize: '14px',
                 fontWeight: 'bold',
-                marginBottom: '7px',
+                marginBottom: '6px',
                 color: '#1e40af',
                 borderBottom: '2px solid #e2e8f0',
                 paddingBottom: '4px',
@@ -636,15 +687,15 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
                 <div
                   key={item.id}
                   style={{
-                    marginBottom: '7px',
-                    paddingBottom: '7px',
+                    marginBottom: '6px',
+                    paddingBottom: '6px',
                     borderBottom: idx < devis.workItems.length - 1 ? '1px solid #e2e8f0' : 'none',
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', marginBottom: '3px', fontSize: '11px', color: '#0f172a' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '2px', fontSize: '12.5px', color: '#0f172a' }}>
                     {item.title}
                   </div>
-                  <div style={{ whiteSpace: 'pre-wrap', fontSize: '10.5px', lineHeight: '1.4', color: '#475569' }}>
+                  <div style={{ whiteSpace: 'pre-wrap', fontSize: '12px', lineHeight: '1.35', color: '#475569' }}>
                     {item.description}
                   </div>
                 </div>
@@ -656,94 +707,98 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
           {devis.premises && (
             <div
               style={{
-                marginBottom: '9px',
+                marginBottom: '8px',
                 backgroundColor: '#f8fafc',
-                padding: '7px 10px',
+                padding: '6px 10px',
                 borderRadius: '4px',
                 flexShrink: 0,
               }}
             >
-              <div style={{ fontWeight: 'bold', marginBottom: '4px', fontSize: '11px', color: '#0f172a' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '3px', fontSize: '12.5px', color: '#0f172a' }}>
                 Locaux à traiter:
               </div>
-              <div style={{ fontSize: '10.5px', color: '#475569' }}>{devis.premises}</div>
+              <div style={{ fontSize: '12px', color: '#475569' }}>{devis.premises}</div>
             </div>
           )}
 
-          {/* Passages breakdown */}
-          {showPassageBreakdown && (
+          {/* Passages: 12-month table for recurring contracts, simple
+              one-line summary for a one-off job */}
+          {isOneOff ? (
             <div
               className="passages-wrap"
               style={{
-                marginTop: '9px',
+                marginTop: '8px',
+                flexShrink: 0,
+                pageBreakInside: 'avoid',
+                breakInside: 'avoid',
+                backgroundColor: '#f8fafc',
+                padding: '6px 10px',
+                borderRadius: '4px',
+              }}
+            >
+              <div style={{ fontSize: '12.5px', color: '#0f172a' }}>
+                <strong>Prix:</strong> {unitPriceNum.toFixed(2)} {settings.currency} / passage
+              </div>
+            </div>
+          ) : (
+            <div
+              className="passages-wrap"
+              style={{
+                marginTop: '8px',
                 flexShrink: 0,
                 pageBreakInside: 'avoid',
                 breakInside: 'avoid',
               }}
             >
-              <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#1e40af', marginBottom: '5px' }}>
-                Prix des passages ({passageCount})
+              <div style={{ fontSize: '12.5px', fontWeight: 'bold', color: '#1e40af', marginBottom: '4px' }}>
+                Calendrier des passages
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    <th
-                      style={{
-                        textAlign: 'left',
-                        padding: '5px 10px',
-                        fontSize: '10.5px',
-                        backgroundColor: '#e2e8f0',
-                        color: '#1e40af',
-                        fontWeight: 'bold',
-                        borderBottom: '1px solid #cbd5e1',
-                      }}
-                    >
-                      Passage
-                    </th>
-                    <th
-                      style={{
-                        textAlign: 'right',
-                        padding: '5px 10px',
-                        fontSize: '10.5px',
-                        backgroundColor: '#e2e8f0',
-                        color: '#1e40af',
-                        fontWeight: 'bold',
-                        borderBottom: '1px solid #cbd5e1',
-                      }}
-                    >
-                      Prix ({settings.currency})
-                    </th>
+                    {monthlyPassages.map((m) => (
+                      <th
+                        key={`h-${m.month}`}
+                        style={{
+                          textAlign: 'center',
+                          padding: '4px 6px',
+                          fontSize: '11px',
+                          backgroundColor: '#e2e8f0',
+                          color: '#1e40af',
+                          fontWeight: 'bold',
+                          borderBottom: '1px solid #cbd5e1',
+                          borderRight: '1px solid #cbd5e1',
+                        }}
+                      >
+                        {m.month.slice(0, 3)}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {passageRows.map((row, idx) => (
-                    <tr key={idx}>
+                  <tr>
+                    {monthlyPassages.map((m) => (
                       <td
+                        key={`v-${m.month}`}
                         style={{
-                          padding: '5px 10px',
-                          fontSize: '10.5px',
-                          color: '#475569',
-                          borderBottom: '1px solid #e2e8f0',
-                        }}
-                      >
-                        {row.label}
-                      </td>
-                      <td
-                        style={{
-                          padding: '5px 10px',
-                          fontSize: '10.5px',
-                          textAlign: 'right',
+                          textAlign: 'center',
+                          padding: '4px 6px',
+                          fontSize: '11px',
                           fontWeight: 600,
                           color: '#0f172a',
                           borderBottom: '1px solid #e2e8f0',
+                          borderRight: '1px solid #e2e8f0',
                         }}
                       >
-                        {row.price.toFixed(2)}
+                        {m.count}
                       </td>
-                    </tr>
-                  ))}
+                    ))}
+                  </tr>
                 </tbody>
               </table>
+              <div style={{ marginTop: '5px', textAlign: 'right', fontSize: '12px', color: '#1e40af', fontWeight: 'bold' }}>
+                Prix: {unitPriceNum.toFixed(2)} {settings.currency} / passage
+              </div>
             </div>
           )}
 
@@ -751,7 +806,7 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
           <div
             className="pricing-wrap"
             style={{
-              marginTop: '9px',
+              marginTop: '8px',
               flexShrink: 0,
               pageBreakInside: 'avoid',
               breakInside: 'avoid',
@@ -762,11 +817,11 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
                 <tr style={{ backgroundColor: taxMode === 'ttc' ? '#f1f5f9' : '#dbeafe' }}>
                   <td
                     style={{
-                      padding: taxMode === 'ttc' ? '7px 10px' : '9px 10px',
+                      padding: taxMode === 'ttc' ? '6px 10px' : '8px 10px',
                       textAlign: 'right',
                       borderBottom: '2px solid #1e40af',
                       fontWeight: 'bold',
-                      fontSize: taxMode === 'ttc' ? '11px' : '12px',
+                      fontSize: taxMode === 'ttc' ? '12.5px' : '13.5px',
                       color: taxMode === 'ttc' ? undefined : '#1e40af',
                       width: '60%',
                     }}
@@ -775,11 +830,11 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
                   </td>
                   <td
                     style={{
-                      padding: taxMode === 'ttc' ? '7px 10px' : '9px 10px',
+                      padding: taxMode === 'ttc' ? '6px 10px' : '8px 10px',
                       textAlign: 'right',
                       borderBottom: '2px solid #1e40af',
                       fontWeight: 'bold',
-                      fontSize: taxMode === 'ttc' ? '12px' : '14px',
+                      fontSize: taxMode === 'ttc' ? '13.5px' : '16px',
                       color: taxMode === 'ttc' ? undefined : '#1e40af',
                       width: '40%',
                     }}
@@ -791,18 +846,18 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
                 {taxMode === 'ttc' && (
                   <>
                     <tr style={{ backgroundColor: '#f8fafc' }}>
-                      <td style={{ padding: '7px 10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', fontSize: '11px' }}>
+                      <td style={{ padding: '6px 10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', fontSize: '12.5px' }}>
                         TVA (19%):
                       </td>
-                      <td style={{ padding: '7px 10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', fontSize: '12px' }}>
+                      <td style={{ padding: '6px 10px', textAlign: 'right', borderBottom: '1px solid #e2e8f0', fontWeight: 'bold', fontSize: '13.5px' }}>
                         {taxesNum.toFixed(2)} {settings.currency}
                       </td>
                     </tr>
                     <tr style={{ backgroundColor: '#dbeafe' }}>
-                      <td style={{ padding: '9px 10px', textAlign: 'right', borderBottom: '2px solid #1e40af', fontWeight: 'bold', fontSize: '12px', color: '#1e40af' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', borderBottom: '2px solid #1e40af', fontWeight: 'bold', fontSize: '13.5px', color: '#1e40af' }}>
                         MONTANT TOTAL TTC:
                       </td>
-                      <td style={{ padding: '9px 10px', textAlign: 'right', borderBottom: '2px solid #1e40af', fontWeight: 'bold', fontSize: '14px', color: '#1e40af' }}>
+                      <td style={{ padding: '8px 10px', textAlign: 'right', borderBottom: '2px solid #1e40af', fontWeight: 'bold', fontSize: '16px', color: '#1e40af' }}>
                         {ttcNum.toFixed(2)} {settings.currency}
                       </td>
                     </tr>
@@ -817,7 +872,7 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
         <div
           className="footer-section"
           style={{
-            padding: '7mm 15mm',
+            padding: '6mm 15mm',
             borderTop: '3px solid #1e40af',
             backgroundColor: '#f8fafc',
             flexShrink: 0,
@@ -825,25 +880,26 @@ export function DevisPreview({ devis, showActions = false }: DevisPreviewProps) 
             breakInside: 'avoid',
           }}
         >
-          <div style={{ marginBottom: '9px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1e40af', marginBottom: '3px' }}>
+          <div style={{ marginBottom: '7px', textAlign: 'center' }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 'bold', color: '#1e40af', marginBottom: '3px' }}>
               {devis.signatureName}
             </div>
-            <div style={{ fontSize: '10.5px', color: '#64748b' }}>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
               Signé le {new Date(devis.emailDate).toLocaleDateString('fr-FR')}
             </div>
           </div>
 
           <div
             style={{
-              fontSize: '9.5px',
+              fontSize: '11px',
               color: '#64748b',
               textAlign: 'center',
               fontStyle: 'italic',
               borderTop: '1px solid #e2e8f0',
-              paddingTop: '7px',
+              paddingTop: '6px',
             }}
           >
+            <div>-Société S.A.R.L Agrée par le Ministère de la santé Publique-</div>
             <div>Devis valable 30 jours à compter de sa date de signature</div>
             <div style={{ marginTop: '3px' }}>Merci de votre confiance</div>
           </div>

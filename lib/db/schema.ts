@@ -115,17 +115,42 @@ export const devis = pgTable('devis', {
   status: text('status').notNull().default('draft'),
   workItems: jsonb('workitems').notNull().default('[]'),
 
-  // ── NEW: tax mode toggle (TVA vs HT) ──────────────────────────────────
-  taxMode: text('taxmode').notNull().default('ttc'), // 'ttc' | 'ht'
+  // ── Tax mode toggle (HT vs TVA) ────────────────────────────────────────
+  // Defaults to 'ht' (no TVA line, total = HT). The editor's toggle can
+  // still switch an individual devis to 'ttc' (adds 19% TVA) if needed.
+  taxMode: text('taxmode').notNull().default('ht'), // 'ttc' | 'ht'
 
-  // ── NEW: passages (visits) pricing ────────────────────────────────────
-  passageCount: integer('passagecount').notNull().default(1),
-  passageSamePrice: boolean('passagesameprice').notNull().default(true),
+  // ── Contract type: monthly (recurring) vs one-off job ─────────────────
+  // 'monthly'  → uses the 12-row monthlyPassages table below.
+  // 'oneoff'   → uses the single oneoffPassageCount field instead; the
+  //              monthly table is not shown/used at all.
+  contractType: text('contracttype').notNull().default('monthly'), // 'monthly' | 'oneoff'
+
+  // ── Monthly passages (visits) pricing — used when contractType='monthly' ──
+  // Passages are tracked as a fixed 12-row table, one entry per calendar
+  // month (Janvier → Décembre), each with its own passage count. All
+  // passages — across every month — share a single unit price, stored
+  // separately below.
+  //
+  // Shape: { month: string; count: number }[], always 12 entries.
+  // jsonb default below is the zeroed 12-month skeleton so existing rows
+  // (and any row inserted without this field) come back well-formed
+  // rather than null/undefined.
+  monthlyPassages: jsonb('monthlypassages').notNull().default(
+    '[{"month":"Janvier","count":0},{"month":"Février","count":0},{"month":"Mars","count":0},{"month":"Avril","count":0},{"month":"Mai","count":0},{"month":"Juin","count":0},{"month":"Juillet","count":0},{"month":"Août","count":0},{"month":"Septembre","count":0},{"month":"Octobre","count":0},{"month":"Novembre","count":0},{"month":"Décembre","count":0}]'
+  ),
+
+  // ── One-off passage count — used when contractType='oneoff' ───────────
+  // A single flat number of passages for the whole job (no month
+  // breakdown). Defaults to 1 — the common case of a single visit.
+  oneoffPassageCount: integer('oneoffpassagecount').notNull().default(1),
+
+  // Shared unit price per passage — applies to BOTH contract types
+  // (multiplied by the sum of monthlyPassages counts, or by
+  // oneoffPassageCount, depending on contractType).
   // stored as text to match the amount/taxes/ttc string-based pattern
   // already used throughout devis.ts (parseFloat on read, string on write)
   passageUnitPrice: text('passageunitprice').notNull().default(''),
-  // string[] of per-passage prices, only used when passageSamePrice=false
-  passagePrices: jsonb('passageprices').notNull().default('[]'),
 
   createdAt: timestamp('createdat').notNull().defaultNow(),
   updatedAt: timestamp('updatedat').notNull().defaultNow(),

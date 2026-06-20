@@ -21,6 +21,19 @@ async function getUserId() {
   return 'demo-user'
 }
 
+// Fixed month order used to build a default monthlyPassages array for
+// rows saved before this field existed (mirrors MONTHS in preview.tsx —
+// kept duplicated here since server actions can't import a 'use client'
+// component file).
+const MONTHS = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
+] as const
+
+function buildDefaultMonthlyPassages() {
+  return MONTHS.map((month) => ({ month, count: 0 }))
+}
+
 // Shapes a raw DB row into the client-facing Devis shape. Centralized here
 // so every getter applies identical defaults. Because the new columns are
 // `notNull().default(...)` in the schema, any row inserted AFTER the
@@ -35,11 +48,21 @@ function shapeDevis(d: any) {
     taxes: d.taxes?.toString() || '0',
     ttc: d.ttc?.toString() || '0',
     workItems: (d.workItems as unknown as WorkItem[]) || [],
-    taxMode: d.taxMode ?? 'ttc',
-    passageCount: d.passageCount ?? 1,
-    passageSamePrice: d.passageSamePrice ?? true,
+    // Defaults to 'ht' (no TVA) — toggle in the editor can still switch
+    // a given devis to 'ttc'.
+    taxMode: d.taxMode ?? 'ht',
+    // Contract type: 'monthly' uses the 12-month table, 'oneoff' uses a
+    // single flat passage count with no month breakdown.
+    contractType: d.contractType ?? 'monthly',
+    // Monthly passages table (12 fixed rows) — used when contractType
+    // is 'monthly'. Falls back to a zeroed 12-row array for rows saved
+    // before this field existed (replaces the old passageCount/
+    // passageSamePrice/passagePrices fields).
+    monthlyPassages: (d.monthlyPassages as unknown as { month: string; count: number }[]) ?? buildDefaultMonthlyPassages(),
+    // Flat passage count — used when contractType is 'oneoff'.
+    oneoffPassageCount: d.oneoffPassageCount ?? 1,
+    // Single shared unit price per passage, applies to both contract types.
     passageUnitPrice: d.passageUnitPrice?.toString() ?? '',
-    passagePrices: (d.passagePrices as unknown as string[]) ?? [],
   }
 }
 
@@ -92,14 +115,14 @@ export async function createDevis(data: Omit<Devis, 'id' | 'createdAt' | 'update
 
   // Read tax/passage fields off the incoming payload, same treatment as
   // every other field below. Without this, a brand-new devis always fell
-  // back to the column DEFAULT (taxMode='ttc', passageCount=1) regardless
-  // of what was actually chosen in the editor — this is what caused new
-  // devis to print without the new settings.
-  const taxMode = (data as any).taxMode ?? 'ttc'
-  const passageCount = (data as any).passageCount ?? 1
-  const passageSamePrice = (data as any).passageSamePrice ?? true
+  // back to the column DEFAULT regardless of what was actually chosen in
+  // the editor — this is what caused new devis to print without the
+  // correct settings. taxMode defaults to 'ht' here too.
+  const taxMode = (data as any).taxMode ?? 'ht'
+  const contractType = (data as any).contractType ?? 'monthly'
+  const monthlyPassages = (data as any).monthlyPassages ?? buildDefaultMonthlyPassages()
+  const oneoffPassageCount = (data as any).oneoffPassageCount ?? 1
   const passageUnitPrice = (data as any).passageUnitPrice ?? ''
-  const passagePrices = (data as any).passagePrices ?? []
 
   await db.insert(devis).values({
     id,
@@ -120,10 +143,10 @@ export async function createDevis(data: Omit<Devis, 'id' | 'createdAt' | 'update
     workItems: data.workItems as any,
     // NEW
     taxMode,
-    passageCount,
-    passageSamePrice,
+    contractType,
+    monthlyPassages: monthlyPassages as any,
+    oneoffPassageCount,
     passageUnitPrice,
-    passagePrices: passagePrices as any,
   })
 
   revalidatePath('/')
@@ -145,9 +168,9 @@ export async function updateDevisAction(id: string, data: Partial<Devis>) {
     ...safeData
   } = data as any
 
-  // safeData now legitimately carries taxMode/passageCount/
-  // passageSamePrice/passageUnitPrice/passagePrices whenever the editor
-  // sends them, since those columns now exist on the `devis` table.
+  // safeData now legitimately carries taxMode/contractType/
+  // monthlyPassages/oneoffPassageCount/passageUnitPrice whenever the
+  // editor sends them, since those columns now exist on the `devis` table.
 
   await db
     .update(devis)
